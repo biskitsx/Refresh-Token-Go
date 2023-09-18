@@ -39,6 +39,7 @@ func main() {
 
 	app.Post("/register", authController.Register)
 	app.Post("/login", authController.Login)
+	app.Post("/logout", authController.Logout)
 
 	app.Get("/me", authMiddleware.RequireUser, userController.GetMe)
 

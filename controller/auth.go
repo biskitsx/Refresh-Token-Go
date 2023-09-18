@@ -10,6 +10,7 @@ import (
 type AuthController interface {
 	Register(c *fiber.Ctx) error
 	Login(c *fiber.Ctx) error
+	Logout(c *fiber.Ctx) error
 }
 
 type authController struct {
@@ -34,8 +35,9 @@ type UserDto struct {
 }
 
 type AccessTokenDto struct {
-	UserID   uint   `json:"user_id"`
-	Username string `json:"username"`
+	SessionID uint   `json:"session_id"`
+	UserID    uint   `json:"user_id"`
+	Username  string `json:"username"`
 }
 
 type RefreshTokenDto struct {
@@ -61,11 +63,20 @@ func (controller authController) Login(c *fiber.Ctx) error {
 	// Create Session
 	session := controller.sessionService.CreateSession(oldUser.ID)
 
-	accessToken, err := controller.jwtService.GenerateToken(&AccessTokenDto{UserID: oldUser.ID, Username: oldUser.Username}, "5s")
+	accessToken, err := controller.jwtService.GenerateToken(
+		&AccessTokenDto{
+			SessionID: session.ID,
+			UserID:    oldUser.ID,
+			Username:  oldUser.Username,
+		}, 5000) // 5 second
 	if err != nil {
 		return fiber.NewError(400, err.Error())
 	}
-	refreshToken, err := controller.jwtService.GenerateToken(&RefreshTokenDto{SessionID: session.ID}, "1h")
+
+	refreshToken, err := controller.jwtService.GenerateToken(
+		&RefreshTokenDto{
+			SessionID: session.ID,
+		}, 3600000)
 	if err != nil {
 		return fiber.NewError(400, err.Error())
 	}
@@ -73,12 +84,12 @@ func (controller authController) Login(c *fiber.Ctx) error {
 	accessCookie := &fiber.Cookie{
 		Name:   "access_token",
 		Value:  accessToken,
-		MaxAge: 10,
+		MaxAge: 600,
 	}
 	refreshCookie := &fiber.Cookie{
 		Name:   "refresh_token",
 		Value:  refreshToken,
-		MaxAge: 600,
+		MaxAge: 3600,
 	}
 
 	c.Cookie(accessCookie)
@@ -109,4 +120,19 @@ func (controller authController) Register(c *fiber.Ctx) error {
 	db := controller.container.GetDatabase()
 	db.Create(&user)
 	return c.JSON(user)
+}
+
+func (controller authController) Logout(c *fiber.Ctx) error {
+	user := c.Locals("user_id")
+	if user == nil {
+		return c.JSON(fiber.Map{
+			"msg": "you didn't login yet",
+		})
+	}
+
+	c.ClearCookie("access_token")
+	c.ClearCookie("refresh_token")
+	return c.JSON(fiber.Map{
+		"msg": "logout successfully",
+	})
 }
