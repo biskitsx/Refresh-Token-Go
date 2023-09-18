@@ -6,6 +6,7 @@ import (
 )
 
 type SessionService interface {
+	GetSession(sessionId uint) *model.Session
 	CreateSession(userId uint) *model.Session
 }
 
@@ -25,5 +26,12 @@ func (service *sessionService) CreateSession(userId uint) *model.Session {
 		UserID: userId,
 	}
 	db.Create(session)
+	return session
+}
+
+func (service *sessionService) GetSession(sessionId uint) *model.Session {
+	db := service.container.GetDatabase()
+	session := &model.Session{}
+	db.Where("id = ?", sessionId).Find(session)
 	return session
 }

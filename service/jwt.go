@@ -1,15 +1,20 @@
 package service
 
 import (
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/biskitsx/Refresh-Token-Go/container"
+	"github.com/biskitsx/Refresh-Token-Go/model"
 	"github.com/dgrijalva/jwt-go"
 )
 
 type JwtService interface {
-	GenerateToken(payload interface{}, expiresIn string) (string, error)
+	GenerateToken(payload interface{}, expiresIn uint) (string, error)
 	VerifyToken(tokenString string) (*jwt.Token, error)
+	GenerateTokenBySession(session *model.Session, expiresIn uint) (string, error)
+	ExtractAccessToken(decodedAccessToken *jwt.Token) (uint, string, error)
 }
 
 type jwtService struct {
@@ -24,10 +29,38 @@ func NewJwtService(c container.Container) JwtService {
 	}
 }
 
-func (service *jwtService) GenerateToken(payload interface{}, expiresIn string) (string, error) {
+func (service *jwtService) GenerateToken(payload interface{}, expiresIn uint) (string, error) {
 	claims := jwt.MapClaims{
 		"user": payload,
-		"exp":  expiresIn,
+		"exp":  time.Now().Add((time.Millisecond * time.Duration(expiresIn))).Unix(),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	tokenString, err := token.SignedString([]byte(service.secretKey))
+	if err != nil {
+		return "", err
+	}
+
+	return tokenString, nil
+}
+
+type AccessTokenDto struct {
+	SessionID uint   `json:"session_id"`
+	UserID    uint   `json:"user_id"`
+	Username  string `json:"username"`
+}
+
+func (service *jwtService) GenerateTokenBySession(session *model.Session, expiresIn uint) (string, error) {
+	payload := AccessTokenDto{
+		SessionID: session.ID,
+		UserID:    session.UserID,
+		Username:  session.Username,
+	}
+
+	claims := jwt.MapClaims{
+		"user": payload,
+		"exp":  time.Now().Add((time.Millisecond * time.Duration(expiresIn))).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -53,3 +86,59 @@ func (service *jwtService) VerifyToken(tokenString string) (*jwt.Token, error) {
 	}
 	return token, nil
 }
+
+func (service *jwtService) ExtractAccessToken(decodedAccessToken *jwt.Token) (uint, string, error) {
+	// Extract the payload from the token
+	payload, ok := decodedAccessToken.Claims.(jwt.MapClaims)
+	if !ok {
+		return 0, "", errors.New("Invalid token claims")
+	}
+
+	fmt.Println(payload)
+	// Extract the user ID and username from the payload
+	userPayload, ok := payload["user"].(map[string]interface{})
+	if !ok {
+		return 0, "", errors.New("Invalid user payload in token")
+	}
+
+	userIDFloat, ok := userPayload["user_id"].(float64)
+	if !ok {
+		return 0, "", errors.New("Invalid user ID in token")
+	}
+
+	username, ok := userPayload["username"].(string)
+	if !ok {
+		return 0, "", errors.New("Invalid username in token")
+	}
+
+	userID := uint(userIDFloat)
+	return userID, username, nil
+}
+
+// func (service *jwtService) ExtractRefreshToken(decodedAccessToken *jwt.Token) (uint, error) {
+// 	// Extract the payload from the token
+// 	payload, ok := decodedAccessToken.Claims.(jwt.MapClaims)
+// 	if !ok {
+// 		return 0, "", errors.New("Invalid token claims")
+// 	}
+
+// 	fmt.Println(payload)
+// 	// Extract the user ID and username from the payload
+// 	userPayload, ok := payload["user"].(map[string]interface{})
+// 	if !ok {
+// 		return 0, "", errors.New("Invalid user payload in token")
+// 	}
+
+// 	userIDFloat, ok := userPayload["user_id"].(float64)
+// 	if !ok {
+// 		return 0, "", errors.New("Invalid user ID in token")
+// 	}
+
+// 	username, ok := userPayload["username"].(string)
+// 	if !ok {
+// 		return 0, "", errors.New("Invalid username in token")
+// 	}
+
+// 	userID := uint(userIDFloat)
+// 	return userID, username, nil
+// }

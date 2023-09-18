@@ -33,13 +33,14 @@ func main() {
 		Format: "[${ip}]:${port} ${status} - ${method} ${path} ${latency}\n",
 	}))
 
+	app.Use(authMiddleware.DeserializeUser)
 	// routes
 	app.Get("/user", userController.GetUser)
 
 	app.Post("/register", authController.Register)
 	app.Post("/login", authController.Login)
 
-	app.Get("/me", authMiddleware.VerifyUser, userController.GetMe)
+	app.Get("/me", authMiddleware.RequireUser, userController.GetMe)
 
 	app.Listen(":8080")
 }

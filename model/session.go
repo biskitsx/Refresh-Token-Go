@@ -1,10 +1,7 @@
 package model
 
-import (
-	"gorm.io/gorm"
-)
-
 type Session struct {
-	gorm.Model
-	UserID uint `json:"user_id"`
+	ID       uint   `gorm:"primaryKey" json:"id"`
+	UserID   uint   `json:"user_id"`
+	Username string `json:"username"`
 }

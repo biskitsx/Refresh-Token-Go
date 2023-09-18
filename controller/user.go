@@ -28,10 +28,7 @@ func (controller userController) GetUser(c *fiber.Ctx) error {
 }
 
 func (controller userController) GetMe(c *fiber.Ctx) error {
-	userId := c.Locals("user_id")
-	username := c.Locals("username")
 	return c.JSON(fiber.Map{
-		"user_id":  userId,
-		"username": username,
+		"msg": "you are logged in",
 	})
 }
