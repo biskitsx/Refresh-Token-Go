@@ -61,7 +61,7 @@ func (controller authController) Login(c *fiber.Ctx) error {
 	}
 
 	// Create Session
-	session := controller.sessionService.CreateSession(oldUser.ID)
+	session := controller.sessionService.CreateSession(oldUser.ID, oldUser.Username)
 
 	accessToken, err := controller.jwtService.GenerateToken(
 		&AccessTokenDto{
@@ -76,7 +76,7 @@ func (controller authController) Login(c *fiber.Ctx) error {
 	refreshToken, err := controller.jwtService.GenerateToken(
 		&RefreshTokenDto{
 			SessionID: session.ID,
-		}, 3600000)
+		}, 100000)
 	if err != nil {
 		return fiber.NewError(400, err.Error())
 	}

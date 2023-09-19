@@ -7,7 +7,7 @@ import (
 
 type SessionService interface {
 	GetSession(sessionId uint) *model.Session
-	CreateSession(userId uint) *model.Session
+	CreateSession(userId uint, username string) *model.Session
 }
 
 type sessionService struct {
@@ -20,10 +20,11 @@ func NewSessionService(c container.Container) SessionService {
 	}
 }
 
-func (service *sessionService) CreateSession(userId uint) *model.Session {
+func (service *sessionService) CreateSession(userId uint, username string) *model.Session {
 	db := service.container.GetDatabase()
 	session := &model.Session{
-		UserID: userId,
+		UserID:   userId,
+		Username: username,
 	}
 	db.Create(session)
 	return session

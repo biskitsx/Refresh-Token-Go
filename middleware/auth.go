@@ -50,7 +50,7 @@ func (a *authMiddleware) DeserializeUser(c *fiber.Ctx) error {
 
 			session := a.sessionService.GetSession(sessionId)
 			newAccessToken, err := a.jwtService.GenerateTokenBySession(session, 5000)
-
+			fmt.Println(session)
 			if err != nil {
 				fmt.Println(err.Error())
 				return c.Next()
